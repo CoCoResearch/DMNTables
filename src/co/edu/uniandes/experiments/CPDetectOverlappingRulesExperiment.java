@@ -13,6 +13,7 @@ public class CPDetectOverlappingRulesExperiment {
 	public CPDetectOverlappingRulesExperiment(){
 		Solver solver = new Solver();
 		
+		//Initialize matrix with hyper-rectangles
 		IntVar [][] matrix = new IntVar[4][4];
 		
 		matrix[0][0] = VariableFactory.fixed("1_Xo", 0, solver);
@@ -35,56 +36,18 @@ public class CPDetectOverlappingRulesExperiment {
 		matrix[3][2] = VariableFactory.fixed("4_Yo", 2500, solver);
 		matrix[3][3] = VariableFactory.fixed("4_Ye", 2000, solver);
 		
+		//Initialize conflicts matrix to identify conflicts among rules
 		IntVar [][] conflicts = new IntVar[4][4];
-		
 		for(int i = 0; i < conflicts.length; i++) {
 			for(int j = 0; j < conflicts.length; j++) {
 				conflicts[i][j] = VariableFactory.bool(i + "_" + j, solver);
 			}
 		}
-
-		/*IntVar Target_Xo = VariableFactory.enumerated("Target_Xo", 0, 2500, solver);
-		IntVar Target_Xe = VariableFactory.enumerated("Target_Xe", 0, 2500, solver);
-		IntVar Target_Yo = VariableFactory.enumerated("Target_Yo", 0, 5000, solver);
-		IntVar Target_Ye = VariableFactory.enumerated("Target_Ye", 0, 5000, solver);*/
-		
-		//BoolVar scenario1 = VariableFactory.bool("S1", solver);
-		
-		/*LogicalConstraintFactory.ifThenElse(
-				LogicalConstraintFactory.and(
-						LogicalConstraintFactory.and(
-								LogicalConstraintFactory.and(
-										LogicalConstraintFactory.and(
-												LogicalConstraintFactory.and(IntConstraintFactory.arithm(matrix[0][1], "<=", matrix[1][1]),
-													IntConstraintFactory.arithm(matrix[0][0], "<=", matrix[1][0])),
-												IntConstraintFactory.arithm(matrix[0][2], "<=", matrix[1][2])
-										),
-										IntConstraintFactory.arithm(matrix[0][3], "<=", matrix[1][3])
-								),
-								IntConstraintFactory.arithm(matrix[0][1], ">", matrix[1][0])
-						),
-						IntConstraintFactory.arithm(matrix[0][3], ">", matrix[1][2])
-				),
-				
-				LogicalConstraintFactory.and(
-					LogicalConstraintFactory.and(
-						LogicalConstraintFactory.and(
-								LogicalConstraintFactory.and(
-										LogicalConstraintFactory.and(IntConstraintFactory.arithm(Target_Xe, "=", matrix[0][1]),
-											IntConstraintFactory.arithm(Target_Xo, "=", matrix[1][0])),
-										IntConstraintFactory.arithm(Target_Yo, ">=", matrix[1][2])	
-								),
-								IntConstraintFactory.arithm(Target_Ye, "<=", matrix[0][3])
-						),
-						IntConstraintFactory.arithm(scenario1, "=", 1)
-					),
-					LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[0][1], "=", 1), IntConstraintFactory.arithm(conflicts[1][0], "=", 1))
-				),
-				IntConstraintFactory.arithm(scenario1, "=", 0)
-		);*/
 		
 		for(int i = 0; i < matrix.length; i++){
 			for(int j = i + 1; j < matrix.length; j++){
+				
+				//Case : 1 - A over B
 				LogicalConstraintFactory.ifThenElse(
 						LogicalConstraintFactory.and(
 								LogicalConstraintFactory.and(
@@ -106,14 +69,12 @@ public class CPDetectOverlappingRulesExperiment {
 			}
 		}
 		
+		//Diagonal has no conflicts
 		for(int i = 0; i < conflicts.length; i++) {
 			solver.post(IntConstraintFactory.arithm(conflicts[i][i], "=", 0));
 		}
 		
-		//solver.post(IntConstraintFactory.arithm(scenario1, "=", 1));
-		/*solver.post(IntConstraintFactory.arithm(Target_Xo, "<", Target_Xe));
-		solver.post(IntConstraintFactory.arithm(Target_Yo, "<", Target_Ye));*/
-		
+		//Solve problem
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
