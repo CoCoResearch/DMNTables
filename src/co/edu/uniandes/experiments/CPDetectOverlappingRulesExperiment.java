@@ -10,11 +10,14 @@ import org.chocosolver.solver.variables.VariableFactory;
 
 public class CPDetectOverlappingRulesExperiment {
 
+	private IntVar [][] matrix;
+	private IntVar [][] conflicts;
+	
 	public CPDetectOverlappingRulesExperiment(){
 		Solver solver = new Solver();
 		
 		//Initialize matrix with hyper-rectangles
-		IntVar [][] matrix = new IntVar[4][4];
+		matrix = new IntVar[4][4];
 		
 		matrix[0][0] = VariableFactory.fixed("1_Xo", 0, solver);
 		matrix[0][1] = VariableFactory.fixed("1_Xe", 1000, solver);
@@ -37,7 +40,7 @@ public class CPDetectOverlappingRulesExperiment {
 		matrix[3][3] = VariableFactory.fixed("4_Ye", 2000, solver);
 		
 		//Initialize conflicts matrix to identify conflicts among rules
-		IntVar [][] conflicts = new IntVar[4][4];
+		conflicts = new IntVar[4][4];
 		for(int i = 0; i < conflicts.length; i++) {
 			for(int j = 0; j < conflicts.length; j++) {
 				conflicts[i][j] = VariableFactory.bool(i + "_" + j, solver);
@@ -47,25 +50,8 @@ public class CPDetectOverlappingRulesExperiment {
 		for(int i = 0; i < matrix.length; i++){
 			for(int j = i + 1; j < matrix.length; j++){
 				
-				//Case : 1 - A over B
-				LogicalConstraintFactory.ifThenElse(
-						LogicalConstraintFactory.and(
-								LogicalConstraintFactory.and(
-										LogicalConstraintFactory.and(
-												LogicalConstraintFactory.and(
-														LogicalConstraintFactory.and(IntConstraintFactory.arithm(matrix[i][1], "<=", matrix[j][1]),
-															IntConstraintFactory.arithm(matrix[i][0], "<=", matrix[j][0])),
-														IntConstraintFactory.arithm(matrix[i][2], "<=", matrix[j][2])
-												),
-												IntConstraintFactory.arithm(matrix[i][3], "<=", matrix[j][3])
-										),
-										IntConstraintFactory.arithm(matrix[i][1], ">", matrix[j][0])
-								),
-								IntConstraintFactory.arithm(matrix[i][3], ">", matrix[j][2])
-						),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 1), IntConstraintFactory.arithm(conflicts[j][i], "=", 1)),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 0), IntConstraintFactory.arithm(conflicts[j][i], "=", 0))
-				);
+				//Cases A-B, B-A)
+				detectOverlappingRules(i,j);
 			}
 		}
 		
@@ -78,5 +64,29 @@ public class CPDetectOverlappingRulesExperiment {
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
+	}
+	
+	/**
+	 * Case 1 of overlapping hyper-rectangles:
+	 * A_Xo <= B_Xo and A_Yo <= B_Yo and A_Xe <= B_Xe and A_Ye <= B_Ye and
+	 * A_Xe > B_Xo and A_Ye > B_Yo
+	 * @param i: index in the decision table of the first hyper-rectangle
+	 * @param j: index in the decision table of the second hyper-rectangle
+	 */
+	private void detectOverlappingRules(int i, int j){
+		LogicalConstraintFactory.ifThenElse(
+				LogicalConstraintFactory.and(
+						LogicalConstraintFactory.and(
+								LogicalConstraintFactory.and(
+										IntConstraintFactory.arithm(matrix[i][0], "<", matrix[j][1]),
+										IntConstraintFactory.arithm(matrix[i][1], ">", matrix[j][0])
+								),
+								IntConstraintFactory.arithm(matrix[i][3], ">", matrix[j][2])
+						),
+						IntConstraintFactory.arithm(matrix[i][2], "<", matrix[j][3])
+				),
+				LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 1), IntConstraintFactory.arithm(conflicts[j][i], "=", 1)),
+				LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 0), IntConstraintFactory.arithm(conflicts[j][i], "=", 0))
+		);
 	}
 }
