@@ -24,7 +24,7 @@ public class CPDetectMissingRulesExperiment {
 		initializeMissingRules();
 		ensureBounds();
 		
-		SMF.limitSolution(solver, 10);
+		//SMF.limitSolution(solver, 10);
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		
@@ -141,7 +141,7 @@ public class CPDetectMissingRulesExperiment {
 	
 	//TODO: ARREGLAR!! 
 	private void postCoordinatesCostraints(int i, int j) {
-		LogicalConstraintFactory.ifThenElse(
+		/*LogicalConstraintFactory.ifThenElse(
 				IntConstraintFactory.arithm(missingRules[i][0], ">", missingRules[j][0]), 
 				IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][1]), 
 				IntConstraintFactory.arithm(missingRules[i][1], "<=", missingRules[j][0])	
@@ -151,6 +151,42 @@ public class CPDetectMissingRulesExperiment {
 				IntConstraintFactory.arithm(missingRules[i][2], ">", missingRules[j][2]), 
 				IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][3]), 
 				IntConstraintFactory.arithm(missingRules[i][3], "<=", missingRules[j][2])
+		);*/
+		
+		LogicalConstraintFactory.ifThen(
+				LogicalConstraintFactory.and(
+						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][2])), 
+				LogicalConstraintFactory.or(
+						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][1]),
+						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][3]))
+		);
+		
+		LogicalConstraintFactory.ifThen(
+				LogicalConstraintFactory.and(
+						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][2], "<", missingRules[j][2])), 
+				LogicalConstraintFactory.or(
+						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][1]),
+						IntConstraintFactory.arithm(missingRules[i][3], "<=", missingRules[j][2]))
+		);
+		
+		LogicalConstraintFactory.ifThen(
+				LogicalConstraintFactory.and(
+						IntConstraintFactory.arithm(missingRules[i][0], "<", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][2])), 
+				LogicalConstraintFactory.or(
+						IntConstraintFactory.arithm(missingRules[i][1], "<=", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][3]))
+		);
+		
+		LogicalConstraintFactory.ifThen(
+				LogicalConstraintFactory.and(
+						IntConstraintFactory.arithm(missingRules[i][0], "<", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][2], "<", missingRules[j][2])), 
+				LogicalConstraintFactory.or(
+						IntConstraintFactory.arithm(missingRules[i][1], "<=", missingRules[j][0]),
+						IntConstraintFactory.arithm(missingRules[i][3], "<=", missingRules[j][2]))
 		);
 	}
 	
