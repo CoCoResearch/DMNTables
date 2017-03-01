@@ -6,6 +6,5 @@ public class Main {
 		//GeometryExperiments experiment2 = new GeometryExperiments();
 		CPDetectMissingRulesExperiment experiment3 = new CPDetectMissingRulesExperiment();
 		//CPDetectOverlappingRulesExperiment experiment4 = new CPDetectOverlappingRulesExperiment();
-
 	}
 }
