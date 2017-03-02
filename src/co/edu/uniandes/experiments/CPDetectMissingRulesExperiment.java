@@ -13,6 +13,7 @@ import org.chocosolver.solver.variables.VariableFactory;
 public class CPDetectMissingRulesExperiment {
 	private IntVar [][] matrix;
 	private IntVar[][] missingRules;
+	private IntVar [][] conflicts;
 	private IntVar missingRulesNumber;
 	private Solver solver;
 
@@ -22,10 +23,12 @@ public class CPDetectMissingRulesExperiment {
 		//Initialize matrix with hyper-rectangles
 		initializeMatrix();
 		initializeMissingRules();
-		ensureBounds();
+		initializeConflictsMatrix();
+		//ensureBounds();
+		detectOverlappingRules();
 		ensureArea();
 		
-		SMF.limitSolution(solver, 5);
+		//SMF.limitSolution(solver, 1);
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		
@@ -41,19 +44,19 @@ public class CPDetectMissingRulesExperiment {
 	}
 	
 	private void initializeMatrix() {
-		matrix = new IntVar[2][4];
+		matrix = new IntVar[1][4];
 
 		matrix[0][0] = VariableFactory.fixed("1_Xo", 0, solver);
 		matrix[0][1] = VariableFactory.fixed("1_Xe", 1000, solver);
 		matrix[0][2] = VariableFactory.fixed("1_Yo", 0, solver);
 		matrix[0][3] = VariableFactory.fixed("1_Ye", 1000, solver);
 
-		matrix[1][0] = VariableFactory.fixed("2_Xo", 250, solver);
+		/*matrix[1][0] = VariableFactory.fixed("2_Xo", 250, solver);
 		matrix[1][1] = VariableFactory.fixed("2_Xe", 750, solver);
 		matrix[1][2] = VariableFactory.fixed("2_Yo", 4000, solver);
 		matrix[1][3] = VariableFactory.fixed("2_Ye", 5000, solver);
 
-		/*matrix[2][0] = VariableFactory.fixed("3_Xo", 500, solver);
+		matrix[2][0] = VariableFactory.fixed("3_Xo", 500, solver);
 		matrix[2][1] = VariableFactory.fixed("3_Xe", 1500, solver);
 		matrix[2][2] = VariableFactory.fixed("3_Yo", 500, solver);
 		matrix[2][3] = VariableFactory.fixed("3_Ye", 3000, solver);
@@ -64,8 +67,17 @@ public class CPDetectMissingRulesExperiment {
 		matrix[3][3] = VariableFactory.fixed("4_Ye", 2000, solver);*/
 	}
 	
+	private void initializeConflictsMatrix(){
+		conflicts = new IntVar[missingRules.length][missingRules.length];
+		for(int i = 0; i < conflicts.length; i++) {
+			for(int j = 0; j < conflicts.length; j++) {
+				conflicts[i][j] = VariableFactory.bool(i + "_" + j, solver);
+			}
+		}
+	}
+	
 	private void initializeMissingRules(){
-		missingRulesNumber = VariableFactory.fixed("MissingRulesNumber", 3, solver);
+		missingRulesNumber = VariableFactory.fixed("MissingRulesNumber", 2, solver);
 		missingRules = new IntVar[matrix.length + missingRulesNumber.getValue()][4];
 		
 		for(int i = 0; i < missingRules.length; i++){
@@ -103,7 +115,7 @@ public class CPDetectMissingRulesExperiment {
 			
 			for(int j = 0; j < missingRules.length; j++) {
 				if(i != j){
-					postCoordinatesCostraints(i,j);
+					//postCoordinatesCostraints(i,j);
 					postXBoundsConstraints(i,j, index, valuesXo, valuesXe);
 					postYBoundsConstraints(i,j, index, valuesYo, valuesYe);
 					index+=2;
@@ -217,44 +229,33 @@ public class CPDetectMissingRulesExperiment {
 		);
 	}
 	
-	//TODO: ARREGLAR!! 
-	private void postCoordinatesCostraints(int i, int j) {
-
-		LogicalConstraintFactory.ifThen(
+	private void detectOverlappingRules(){
+		for(int i = matrix.length; i < missingRules.length; i++){
+			for(int j = 0; j < missingRules.length; j++){
+				if(i != j) {
+					//Cases A-B, B-A)
+					detectOverlappingPairRules(i,j);
+				}
+			}
+		}
+	}
+	
+	private void detectOverlappingPairRules(int i, int j){
+		LogicalConstraintFactory.ifThenElse(
 				LogicalConstraintFactory.and(
-						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][2])), 
-				LogicalConstraintFactory.or(
-						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][1]),
-						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][3]))
+						LogicalConstraintFactory.and(
+								LogicalConstraintFactory.and(
+										IntConstraintFactory.arithm(missingRules[i][0], "<", missingRules[j][1]),
+										IntConstraintFactory.arithm(missingRules[i][1], ">", missingRules[j][0])
+								),
+								IntConstraintFactory.arithm(missingRules[i][3], ">", missingRules[j][2])
+						),
+						IntConstraintFactory.arithm(missingRules[i][2], "<", missingRules[j][3])
+				),
+				LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 1), IntConstraintFactory.arithm(conflicts[j][i], "=", 1)),
+				LogicalConstraintFactory.and(IntConstraintFactory.arithm(conflicts[i][j], "=", 0), IntConstraintFactory.arithm(conflicts[j][i], "=", 0))
 		);
-		
-		LogicalConstraintFactory.ifThen(
-				LogicalConstraintFactory.and(
-						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][2], "<", missingRules[j][2])), 
-				LogicalConstraintFactory.or(
-						IntConstraintFactory.arithm(missingRules[i][0], ">=", missingRules[j][1]),
-						IntConstraintFactory.arithm(missingRules[i][3], "<=", missingRules[j][2]))
-		);
-		
-		LogicalConstraintFactory.ifThen(
-				LogicalConstraintFactory.and(
-						IntConstraintFactory.arithm(missingRules[i][0], "<", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][2])), 
-				LogicalConstraintFactory.or(
-						IntConstraintFactory.arithm(missingRules[i][1], "<=", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][2], ">=", missingRules[j][3]))
-		);
-		
-		LogicalConstraintFactory.ifThen(
-				LogicalConstraintFactory.and(
-						IntConstraintFactory.arithm(missingRules[i][0], "<", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][2], "<", missingRules[j][2])), 
-				LogicalConstraintFactory.or(
-						IntConstraintFactory.arithm(missingRules[i][1], "<=", missingRules[j][0]),
-						IntConstraintFactory.arithm(missingRules[i][3], "<=", missingRules[j][2]))
-		);
+		solver.post(IntConstraintFactory.arithm(conflicts[i][j], "=", 0));
 	}
 	
 	private void ensureArea(){
