@@ -7,6 +7,8 @@ public class Main {
 		//CPDetectMissingRulesExperiment experiment3 = new CPDetectMissingRulesExperiment();
 		//CPDetectOverlappingRulesExperiment experiment4 = new CPDetectOverlappingRulesExperiment();
 		
-		CPDetectOverlappingRulesGeneric generic = new CPDetectOverlappingRulesGeneric("C:\\Users\\Lina8a\\Documents\\job\\asistencia\\articulo9_DMTables-BPMConf\\experiments\\decision-tables\\loan-grade.properties");
+		String path  = "C:\\Users\\Lina8a\\Documents\\job\\asistencia\\articulo9_DMTables-BPMConf\\experiments\\decision-tables\\loan-grade.properties";
+		//CPDetectOverlappingRulesGeneric generic = new CPDetectOverlappingRulesGeneric(path);
+		CPDetectMissingRulesGeneric generic = new CPDetectMissingRulesGeneric(path, 2);
 	}
 }

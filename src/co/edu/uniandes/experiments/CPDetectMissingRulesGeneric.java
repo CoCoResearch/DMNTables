@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
@@ -12,25 +13,31 @@ import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.VariableFactory;
 
-public class CPDetectOverlappingRulesGeneric {
-
-	private Solver solver;
+public class CPDetectMissingRulesGeneric {
 	private IntVar [][] rules;
+	private IntVar[][] missingRules;
 	private IntVar [][] overlaps;
+	private int missingRulesNumber;
+	private Solver solver;
+	private int[] bounds;
 	private Properties properties;
 	private int rulesNumber;
 	private int attrsNumber;
-	
+
 	/**
 	 * Class constructor
 	 * @param propertiesPath - String with the decision rules 
 	 * properties path
 	 */
-	public CPDetectOverlappingRulesGeneric(String propertiesPath){
-		solver = new Solver();
-		
+	public CPDetectMissingRulesGeneric(String propertiesPath, int missingRulesNumber){
+		this.solver = new Solver();
+		this.missingRulesNumber = missingRulesNumber;
+
 		//Initialize rules matrix with hyper-rectangles
 		initializeMatrix(propertiesPath);
+		
+		//Initialize missingRules matrix with K hyper-rectangles
+		initializeMissingRules();
 		
 		//Initialize overlaps matrix to identify conflicts among rules
 		initializeOverlapsMatrix();
@@ -38,10 +45,10 @@ public class CPDetectOverlappingRulesGeneric {
 		//Detect overlapping rules and fill the overlaps matrix
 		detectOverlappingRules();
 		
-		//Diagonal has no overlaps
-		setDiagonalToZero();
+		//
+		ensureArea();
 		
-		//Solve problem
+		//SMF.limitSolution(solver, 1);
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
@@ -63,10 +70,20 @@ public class CPDetectOverlappingRulesGeneric {
 			InputStream stream = new FileInputStream(propertiesPath);
 			properties.load(stream);
 			
-			rulesNumber = Integer.valueOf(properties.getProperty("M"));
+			//rulesNumber = Integer.valueOf(properties.getProperty("M"));
+			rulesNumber = 1;
 			attrsNumber = Integer.valueOf(properties.getProperty("N"));
 			
 			rules = new IntVar[rulesNumber][2*attrsNumber];
+			bounds = new int[2*attrsNumber];
+			
+			for(int i = 0; i < attrsNumber; i++){
+				int lb = Integer.valueOf(properties.getProperty("attr[" + (2*i) + "]"));
+				int ub = Integer.valueOf(properties.getProperty("attr[" + (2*i + 1) + "]"));
+				
+				bounds[2*i] = lb;
+				bounds[2*i + 1] = ub;
+			}
 			
 			for(int i = 0; i < rulesNumber; i++){
 				for(int j = 0; j < attrsNumber; j++){
@@ -81,6 +98,29 @@ public class CPDetectOverlappingRulesGeneric {
 		} 
 		catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Initialize missing rules matrix based in the K number
+	 * given by parameter during the object construction.
+	 */
+	private void initializeMissingRules(){
+		missingRules = new IntVar[rules.length + missingRulesNumber][4];
+		
+		for(int i = 0; i < missingRules.length; i++){
+			if(i < rules.length){
+				for(int p = 0; p < attrsNumber; p++){
+					missingRules[i][2*p] = rules[i][2*p];
+					missingRules[i][2*p + 1] = rules[i][2*p + 1];
+				}
+			}
+			else{
+				for(int p = 0; p < attrsNumber; p++){
+					missingRules[i][2*p] = VariableFactory.enumerated("Rule_" + i + "_LB", bounds[2*p], bounds[2*p + 1], solver);
+					missingRules[i][2*p + 1] = VariableFactory.enumerated("Rule_" + i + "_UB", bounds[2*p], bounds[2*p + 1], solver);
+				}
+			}
 		}
 	}
 	
@@ -104,8 +144,6 @@ public class CPDetectOverlappingRulesGeneric {
 	private void detectOverlappingRules(){
 		for(int i = 0; i < rules.length; i++){
 			for(int j = i + 1; j < rules.length; j++){
-				
-				//Cases A-B, B-A)
 				detectOverlappingPairRules(i,j);
 			}
 		}
@@ -133,15 +171,62 @@ public class CPDetectOverlappingRulesGeneric {
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 1), IntConstraintFactory.arithm(overlaps[j][i], "=", 1)),
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0))
 		);
+		
+		solver.post(LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0)));
 	}
 	
 	/**
-	 * Set diagonal free of overlapping errors. An hyper-rectangle
-	 * cannot overlap itself.
+	 * 
 	 */
-	private void setDiagonalToZero(){
-		for(int i = 0; i < overlaps.length; i++) {
-			solver.post(IntConstraintFactory.arithm(overlaps[i][i], "=", 0));
+	private void ensureArea(){
+		IntVar[] areas = new IntVar[missingRules.length];
+		int totalArea = calculateTotalArea();
+		IntVar areasSum = VariableFactory.fixed("SumAreas", totalArea, solver);
+		
+		for(int i = 0; i < missingRules.length; i++) {
+			IntVar[] distances = new IntVar[attrsNumber];
+			areas[i] = VariableFactory.enumerated("Area_" + i, 0, totalArea, solver);
+			
+			for(int p = 0; p < attrsNumber; p++) {
+				IntVar[] distance = new IntVar[2];
+				distance[0] = VariableFactory.minus(missingRules[i][2*p]);
+				distance[1] = missingRules[i][2*p + 1];
+				
+				distances[p] = VariableFactory.enumerated("Distance_" + p + "_Rule_" + i, bounds[2*p], bounds[2*p + 1], solver);
+				
+				solver.post(IntConstraintFactory.sum(distance, distances[p]));
+			}
+			
+			for(int p = 1; p < attrsNumber; p++) {
+				if(p == 1){
+					solver.post(IntConstraintFactory.times(distances[p - 1], distances[p], areas[i]));
+				}
+				else{
+					solver.post(IntConstraintFactory.times(areas[i], distances[p], areas[i]));
+				}
+			}	
 		}
+		
+		solver.post(IntConstraintFactory.sum(areas, ">=", areasSum));
+	}
+	
+	/**
+	 * Calculate total area of the decision space. This method
+	 * considers the upper bounds of each input attribute.
+	 * @return totalArea - int with the calculated space area
+	 */
+	public int calculateTotalArea(){
+		int totalArea = 0;
+		
+		for(int p = 0; p < attrsNumber; p++){
+			if(totalArea == 0){
+				totalArea = bounds[2*p + 1];
+			}
+			else{
+				totalArea *= bounds[2*p + 1];
+			}
+		}
+		
+		return totalArea;
 	}
 }
