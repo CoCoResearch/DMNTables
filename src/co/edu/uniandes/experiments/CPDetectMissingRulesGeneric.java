@@ -23,15 +23,19 @@ public class CPDetectMissingRulesGeneric {
 	private Properties properties;
 	private int rulesNumber;
 	private int attrsNumber;
+	private int maxRulesNumber;
 
 	/**
 	 * Class constructor
-	 * @param propertiesPath - String with the decision rules 
-	 * properties path
+	 * @param propertiesPath - String with the decision rules properties path
+	 * @param missingRulesNumber - int with the number of missing rules to 
+	 * identify (K)
+	 * @param maxRulesNumber - int with number of initial rules to consider
 	 */
-	public CPDetectMissingRulesGeneric(String propertiesPath, int missingRulesNumber){
+	public CPDetectMissingRulesGeneric(String propertiesPath, int missingRulesNumber, int maxRulesNumber){
 		this.solver = new Solver();
 		this.missingRulesNumber = missingRulesNumber;
+		this.maxRulesNumber = maxRulesNumber;
 
 		//Initialize rules matrix with hyper-rectangles
 		initializeMatrix(propertiesPath);
@@ -45,7 +49,10 @@ public class CPDetectMissingRulesGeneric {
 		//Detect overlapping rules and fill the overlaps matrix
 		detectOverlappingRules();
 		
-		//
+		//Diagonal has no overlaps
+		setDiagonalToZero();
+		
+		//Ensure the complete decision space area is filled with hyper-rectangles
 		ensureArea();
 		
 		//SMF.limitSolution(solver, 1);
@@ -70,8 +77,12 @@ public class CPDetectMissingRulesGeneric {
 			InputStream stream = new FileInputStream(propertiesPath);
 			properties.load(stream);
 			
-			//rulesNumber = Integer.valueOf(properties.getProperty("M"));
-			rulesNumber = 1;
+			if(maxRulesNumber == -1) {
+				rulesNumber = Integer.valueOf(properties.getProperty("M"));
+			}
+			else{
+				rulesNumber = maxRulesNumber;
+			}
 			attrsNumber = Integer.valueOf(properties.getProperty("N"));
 			
 			rules = new IntVar[rulesNumber][2*attrsNumber];
@@ -129,7 +140,7 @@ public class CPDetectMissingRulesGeneric {
 	 * as boolean variables.
 	 */
 	private void initializeOverlapsMatrix(){
-		overlaps = new IntVar[rulesNumber][2*attrsNumber];
+		overlaps = new IntVar[missingRules.length][2*attrsNumber];
 		
 		for(int i = 0; i < overlaps.length; i++) {
 			for(int j = 0; j < overlaps.length; j++) {
@@ -142,8 +153,8 @@ public class CPDetectMissingRulesGeneric {
 	 * Detect all overlapping rules in the given decision space.
 	 */
 	private void detectOverlappingRules(){
-		for(int i = 0; i < rules.length; i++){
-			for(int j = i + 1; j < rules.length; j++){
+		for(int i = 0; i < missingRules.length; i++){
+			for(int j = i + 1; j < missingRules.length; j++){
 				detectOverlappingPairRules(i,j);
 			}
 		}
@@ -162,8 +173,8 @@ public class CPDetectMissingRulesGeneric {
 		Constraint[] constraints = new Constraint[2*attrsNumber];
 		
 		for(int p = 0; p < attrsNumber; p++){			
-			constraints[2*p] = IntConstraintFactory.arithm(rules[i][2*p], "<", rules[j][2*p + 1]);
-			constraints[2*p + 1] = IntConstraintFactory.arithm(rules[i][2*p + 1], ">", rules[j][2*p]);
+			constraints[2*p] = IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[j][2*p + 1]);
+			constraints[2*p + 1] = IntConstraintFactory.arithm(missingRules[i][2*p + 1], ">", missingRules[j][2*p]);
 		}
 		
 		LogicalConstraintFactory.ifThenElse(
@@ -173,6 +184,16 @@ public class CPDetectMissingRulesGeneric {
 		);
 		
 		solver.post(LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0)));
+	}
+	
+	/**
+	 * Set diagonal free of overlapping errors. An hyper-rectangle
+	 * cannot overlap itself.
+	 */
+	private void setDiagonalToZero(){
+		for(int i = 0; i < overlaps.length; i++) {
+			solver.post(IntConstraintFactory.arithm(overlaps[i][i], "=", 0));
+		}
 	}
 	
 	/**

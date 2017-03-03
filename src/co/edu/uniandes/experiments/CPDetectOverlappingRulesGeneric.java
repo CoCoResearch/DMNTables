@@ -20,14 +20,16 @@ public class CPDetectOverlappingRulesGeneric {
 	private Properties properties;
 	private int rulesNumber;
 	private int attrsNumber;
+	private int maxRulesNumber;
 	
 	/**
 	 * Class constructor
-	 * @param propertiesPath - String with the decision rules 
-	 * properties path
+	 * @param propertiesPath - String with the decision rules properties path
+	 * @param maxRulesNumber - int with number of initial rules to consider
 	 */
-	public CPDetectOverlappingRulesGeneric(String propertiesPath){
-		solver = new Solver();
+	public CPDetectOverlappingRulesGeneric(String propertiesPath, int maxRulesNumber){
+		this.solver = new Solver();
+		this.maxRulesNumber = maxRulesNumber;
 		
 		//Initialize rules matrix with hyper-rectangles
 		initializeMatrix(propertiesPath);
@@ -63,7 +65,13 @@ public class CPDetectOverlappingRulesGeneric {
 			InputStream stream = new FileInputStream(propertiesPath);
 			properties.load(stream);
 			
-			rulesNumber = Integer.valueOf(properties.getProperty("M"));
+			if(maxRulesNumber == -1) {
+				rulesNumber = Integer.valueOf(properties.getProperty("M"));
+			}
+			else{
+				rulesNumber = maxRulesNumber;
+			}
+			
 			attrsNumber = Integer.valueOf(properties.getProperty("N"));
 			
 			rules = new IntVar[rulesNumber][2*attrsNumber];
