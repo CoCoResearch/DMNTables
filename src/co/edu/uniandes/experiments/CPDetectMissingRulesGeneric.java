@@ -197,7 +197,9 @@ public class CPDetectMissingRulesGeneric {
 	}
 	
 	/**
-	 * 
+	 * Ensure the complete decision space area is filled with hyper-rectangles.
+	 * Hyper-rectangles areas are calculated and compared against the space
+	 * total area.
 	 */
 	private void ensureArea(){
 		IntVar[] areas = new IntVar[missingRules.length];
