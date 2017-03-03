@@ -9,8 +9,8 @@ import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.solver.variables.VariableFactory;
 
-public class CPPropagteDecisionsExperiment {
-	public CPPropagteDecisionsExperiment(){
+public class CPPropagateDecisionsExperiment {
+	public CPPropagateDecisionsExperiment(){
 		Solver solver = new Solver();
 		
 		IntVar age = VariableFactory.enumerated("age", 0, 100, solver);
