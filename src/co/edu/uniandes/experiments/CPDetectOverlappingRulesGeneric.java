@@ -14,13 +14,49 @@ import org.chocosolver.solver.variables.VariableFactory;
 
 public class CPDetectOverlappingRulesGeneric {
 
+	//-------------------------------------------
+	//ATTRIBUTES
+	//-------------------------------------------
+	
+	/**
+	 * CP solver
+	 */
 	private Solver solver;
+	
+	/**
+	 * Rules matrix
+	 */
 	private IntVar [][] rules;
+	
+	/**
+	 * Overlaps matrix
+	 */
 	private IntVar [][] overlaps;
+	
+	/**
+	 * Properties file with the selected decision table
+	 */
 	private Properties properties;
+	
+	/**
+	 * Number of rules in the decision table
+	 */
 	private int rulesNumber;
+	
+	/**
+	 * Number of input attributes in the decision table
+	 */
 	private int attrsNumber;
+	
+	/**
+	 * Number of rules to evaluate
+	 */
 	private int maxRulesNumber;
+	
+	
+	//-------------------------------------------
+	//METHODS
+	//-------------------------------------------
 	
 	/**
 	 * Class constructor
@@ -97,7 +133,7 @@ public class CPDetectOverlappingRulesGeneric {
 	 * as boolean variables.
 	 */
 	private void initializeOverlapsMatrix(){
-		overlaps = new IntVar[rulesNumber][2*attrsNumber];
+		overlaps = new IntVar[rulesNumber][rulesNumber];
 		
 		for(int i = 0; i < overlaps.length; i++) {
 			for(int j = 0; j < overlaps.length; j++) {

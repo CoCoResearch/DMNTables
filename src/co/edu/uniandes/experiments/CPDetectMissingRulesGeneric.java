@@ -9,22 +9,73 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
+import org.chocosolver.solver.search.loop.monitors.SMF;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.VariableFactory;
 
 public class CPDetectMissingRulesGeneric {
-	private IntVar [][] rules;
-	private IntVar[][] missingRules;
-	private IntVar [][] overlaps;
-	private int missingRulesNumber;
+	
+	//-------------------------------------------
+	//ATTRIBUTES
+	//-------------------------------------------
+	
+	/**
+	 * CP solver
+	 */
 	private Solver solver;
+	
+	/**
+	 * Rules matrix
+	 */
+	private IntVar [][] rules;
+	
+	/**
+	 * Missing rules matrix
+	 */
+	private IntVar[][] missingRules;
+	
+	/**
+	 * Overlaps matrix
+	 */
+	private IntVar [][] overlaps;
+	
+	/**
+	 * Array of the N-dimensional space and identified
+	 * hyper-rectangles bounds
+	 */
 	private int[] bounds;
+	
+	/**
+	 * Properties file with the selected decision table
+	 */
 	private Properties properties;
+	
+	/**
+	 * Number of missing rules to find
+	 */
+	private int missingRulesNumber;
+	
+	/**
+	 * Number of rules in the decision table
+	 */
 	private int rulesNumber;
+	
+	/**
+	 * Number of input attributes in the decision table
+	 */
 	private int attrsNumber;
+	
+	/**
+	 * Number of rules to evaluate
+	 */
 	private int maxRulesNumber;
 
+	
+	//-------------------------------------------
+	//METHODS
+	//-------------------------------------------
+	
 	/**
 	 * Class constructor
 	 * @param propertiesPath - String with the decision rules properties path
@@ -32,7 +83,7 @@ public class CPDetectMissingRulesGeneric {
 	 * identify (K)
 	 * @param maxRulesNumber - int with number of initial rules to consider
 	 */
-	public CPDetectMissingRulesGeneric(String propertiesPath, int missingRulesNumber, int maxRulesNumber){
+	public CPDetectMissingRulesGeneric(String propertiesPath, int maxRulesNumber, int missingRulesNumber, int maxSolutions){
 		this.solver = new Solver();
 		this.missingRulesNumber = missingRulesNumber;
 		this.maxRulesNumber = maxRulesNumber;
@@ -55,7 +106,15 @@ public class CPDetectMissingRulesGeneric {
 		//Ensure the complete decision space area is filled with hyper-rectangles
 		ensureArea();
 		
-		//SMF.limitSolution(solver, 1);
+		//Set solutions limit
+		if(maxSolutions != -1){
+			SMF.limitSolution(solver, maxSolutions);
+		}
+		else{
+			SMF.limitSolution(solver, 20);
+		}
+		
+		//Solve problem
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
@@ -117,21 +176,28 @@ public class CPDetectMissingRulesGeneric {
 	 * given by parameter during the object construction.
 	 */
 	private void initializeMissingRules(){
-		missingRules = new IntVar[rules.length + missingRulesNumber][4];
+		missingRules = new IntVar[rules.length + missingRulesNumber][2*attrsNumber];
 		
 		for(int i = 0; i < missingRules.length; i++){
 			if(i < rules.length){
 				for(int p = 0; p < attrsNumber; p++){
 					missingRules[i][2*p] = rules[i][2*p];
 					missingRules[i][2*p + 1] = rules[i][2*p + 1];
+					System.out.println(missingRules[i][2*p]);
+					System.out.println(missingRules[i][2*p + 1]);
+					solver.post(IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[i][2*p + 1]));
 				}
 			}
 			else{
 				for(int p = 0; p < attrsNumber; p++){
 					missingRules[i][2*p] = VariableFactory.enumerated("Rule_" + i + "_LB", bounds[2*p], bounds[2*p + 1], solver);
 					missingRules[i][2*p + 1] = VariableFactory.enumerated("Rule_" + i + "_UB", bounds[2*p], bounds[2*p + 1], solver);
+					System.out.println(missingRules[i][2*p]);
+					System.out.println(missingRules[i][2*p + 1]);
+					solver.post(IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[i][2*p + 1]));
 				}
 			}
+			
 		}
 	}
 	
@@ -140,7 +206,7 @@ public class CPDetectMissingRulesGeneric {
 	 * as boolean variables.
 	 */
 	private void initializeOverlapsMatrix(){
-		overlaps = new IntVar[missingRules.length][2*attrsNumber];
+		overlaps = new IntVar[missingRules.length][missingRules.length];
 		
 		for(int i = 0; i < overlaps.length; i++) {
 			for(int j = 0; j < overlaps.length; j++) {
@@ -153,9 +219,12 @@ public class CPDetectMissingRulesGeneric {
 	 * Detect all overlapping rules in the given decision space.
 	 */
 	private void detectOverlappingRules(){
-		for(int i = 0; i < missingRules.length; i++){
-			for(int j = i + 1; j < missingRules.length; j++){
-				detectOverlappingPairRules(i,j);
+		for(int i = rulesNumber; i < missingRules.length; i++){
+			for(int j = 0; j < missingRules.length; j++){
+				if(i != j){
+					detectOverlappingPairRules(i,j);
+					System.out.println(i + "_" +j);
+				}
 			}
 		}
 	}
