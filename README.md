@@ -1,2 +1,2 @@
 # DMNTables
-DMN tables decision propagation, and correctness and completeness analysis CP-based algorithms.
+CP-based algorithms for DMN tables decision propagation, and correctness and completeness analysis.
