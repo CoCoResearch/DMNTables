@@ -28,75 +28,49 @@ public class CPPropagateDecisionsGeneric {
 	 */
 	private Solver solver;
 
+	/**
+	 * Hash map with attributes identified by its name
+	 */
 	private HashMap<String, IntVar> attributes;
-
-	/**
-	 * Rules matrix
-	 */
-	private IntVar [][] rules;
-
-	/**
-	 * Missing rules matrix
-	 */
-	private IntVar[][] missingRules;
-
-	/**
-	 * Overlaps matrix
-	 */
-	private IntVar [][] overlaps;
-
-	/**
-	 * Array of the N-dimensional space and identified
-	 * hyper-rectangles bounds
-	 */
-	private int[] bounds;
 
 	/**
 	 * Properties file with the selected decision table
 	 */
 	private Properties properties;
 
-	/**
-	 * Number of missing rules to find
-	 */
-	private int missingRulesNumber;
-
-	/**
-	 * Number of rules in the decision table
-	 */
-	private int rulesNumber;
-
-	/**
-	 * Number of input attributes in the decision table
-	 */
-	private int attrsNumber;
-
-	/**
-	 * Number of rules to evaluate
-	 */
-	private int maxRulesNumber;
-
 
 	//-------------------------------------------
 	//METHODS
 	//-------------------------------------------
 
-	public CPPropagateDecisionsGeneric(String propertiesPath){
+	/**
+	 * Class constructor.
+	 * @param propertiesPath - String with the FSG properties path
+	 * @param configurationPath - String with the configuration properties path
+	 */
+	public CPPropagateDecisionsGeneric(String propertiesPath, String configurationPath){
 		this.solver = new Solver();
 
+		//Load the FSG from a properties file
 		loadProperties(propertiesPath);
+		
+		//Initialize FSG attributes
 		initializeAttributes();
+		
+		//Post If-Then rules
 		postRules();
-		postConfig();
+		
+		//Post hard constraints related to config selection
+		postConfig(configurationPath);
+		
+		//Solve the problem
 		solve();
 	}
 
-	private void solve() {
-		Chatterbox.showSolutions(solver);
-		solver.findAllSolutions();
-		Chatterbox.printStatistics(solver);
-	}
-
+	/**
+	 * Load properties file with FSG definition.
+	 * @param propertiesPath - String with the FSG properties path
+	 */
 	private void loadProperties(String propertiesPath){
 		try{
 			properties = new Properties();
@@ -107,7 +81,11 @@ public class CPPropagateDecisionsGeneric {
 			e.printStackTrace();
 		}
 	}
-
+	
+	/**
+	 * Initialize FSG attributes based on the input properties
+	 * file. CSP domains and variables are defined. 
+	 */
 	private void initializeAttributes() {
 		String attributesString = properties.getProperty("attributes");
 		String[] attributesArray = attributesString.split(",");
@@ -122,11 +100,13 @@ public class CPPropagateDecisionsGeneric {
 		System.out.println();
 	}
 
+	/**
+	 * Post If-Then rules for all FMs in the FSG.
+	 */
 	private void postRules(){
 		int fms = Integer.valueOf(properties.getProperty("FM"));
 
 		for(int i = 0; i < fms; i++){
-			String tableName = properties.getProperty("FM" + i + "-name");
 			String inputAttrsString = properties.getProperty("FM" + i + "-IA");
 			String[] inputAttrsArray = inputAttrsString.split(",");
 			String outputAttrsString = properties.getProperty("FM" + i + "-OA");
@@ -142,6 +122,13 @@ public class CPPropagateDecisionsGeneric {
 		}
 	}
 
+	/**
+	 * Translate one rule into a If-Then constraint in the CP
+	 * solver. Input and output attributes are considered.
+	 * @param ruleArray - String array with all inequalities among attributes
+	 * @param inputAttrsArray - String array with input attributes names
+	 * @param outputAttrsArray - String array with output attributes names
+	 */
 	private void translateRule(String[] ruleArray, String[] inputAttrsArray, String[] outputAttrsArray){
 		List<Constraint> ifConstraints = new ArrayList<Constraint>();
 		List<Constraint> thenConstraints = new ArrayList<Constraint>();
@@ -175,7 +162,6 @@ public class CPPropagateDecisionsGeneric {
 						}
 					}
 				}
-
 			}
 		}
 		
@@ -189,10 +175,14 @@ public class CPPropagateDecisionsGeneric {
 		System.out.println();
 	}
 	
-	private void postConfig(){
+	/**
+	 * Post hard constraints related to the configuration selected
+	 * values. Arithm constraints with an equality operator are used.
+	 */
+	private void postConfig(String configurationPath){
 		try{
 			Properties config = new Properties();
-			InputStream stream = new FileInputStream("decision-tables/config-loan-approval.properties");
+			InputStream stream = new FileInputStream(configurationPath);
 			config.load(stream);
 			
 			int attrs = Integer.valueOf(config.getProperty("attrs"));
@@ -203,12 +193,20 @@ public class CPPropagateDecisionsGeneric {
 				solver.post(
 						IntConstraintFactory.arithm(attributes.get(configArray[0]), "=", Integer.valueOf(configArray[1]))
 				);
-				;
 			}
 			
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Solves the CSP problem. All solutions are searched.
+	 */
+	private void solve() {
+		Chatterbox.showSolutions(solver);
+		solver.findAllSolutions();
+		Chatterbox.printStatistics(solver);
 	}
 }
