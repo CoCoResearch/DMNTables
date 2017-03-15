@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/DMN/20151101/dmn11.xsd" id="definitions" name="definitions" namespace="http://camunda.org/schema/1.0/dmn">
+  <decision id="decision" name="Discount">
+    <decisionTable id="decisionTable">
+      <input id="input1" label="Age">
+        <inputExpression id="inputExpression1" typeRef="integer">        <text>customerAge</text>
+</inputExpression>
+      </input>
+      <input id="input2" label="Customer Status">
+        <inputExpression id="inputExpression2" typeRef="string">        <text>status</text>
+</inputExpression>
+      </input>
+      <output id="output1" label="Discount" name="discountPercentage" typeRef="string" />
+      <rule id="rule1">
+        <inputEntry id="inputEntry1">        <text><![CDATA[<= 30]]></text>
+</inputEntry>
+        <inputEntry id="inputEntry2">        <text></text>
+</inputEntry>
+        <outputEntry id="outputEntry1">        <text><![CDATA["20%"]]></text>
+</outputEntry>
+      </rule>
+      <rule id="rule2">
+        <inputEntry id="inputEntry3">        <text>(30, 60]</text>
+</inputEntry>
+        <inputEntry id="inputEntry4">        <text><![CDATA["Married"]]></text>
+</inputEntry>
+        <outputEntry id="outputEntry3">        <text><![CDATA["20%"]]></text>
+</outputEntry>
+      </rule>
+      <rule id="table-740948307-2">
+        <inputEntry id="UnaryTests_1il1j5z">        <text>(30, 60]</text>
+</inputEntry>
+        <inputEntry id="UnaryTests_1dtpdp0">        <text><![CDATA["Single"]]></text>
+</inputEntry>
+        <outputEntry id="LiteralExpression_123nwwv">        <text><![CDATA["30%"]]></text>
+</outputEntry>
+      </rule>
+      <rule id="table-236307508-1">
+        <inputEntry id="UnaryTests_0qywbtf">        <text>[40, 50]</text>
+</inputEntry>
+        <inputEntry id="UnaryTests_0qb17ri">        <text><![CDATA["Married"]]></text>
+</inputEntry>
+        <outputEntry id="LiteralExpression_19h9mso">        <text><![CDATA["25%"]]></text>
+</outputEntry>
+      </rule>
+      <rule id="row-633000321-3">
+        <inputEntry id="UnaryTests_11vdc1z">        <text><![CDATA[> 60]]></text>
+</inputEntry>
+        <inputEntry id="UnaryTests_17kvkab">        <text></text>
+</inputEntry>
+        <outputEntry id="LiteralExpression_0f7p326">        <text><![CDATA["20%"]]></text>
+</outputEntry>
+      </rule>
+      <rule id="row-633000321-6">
+        <inputEntry id="UnaryTests_1q0m1sh">        <text><![CDATA[> 60]]></text>
+</inputEntry>
+        <inputEntry id="UnaryTests_0pp42zo">        <text><![CDATA["Single"]]></text>
+</inputEntry>
+        <outputEntry id="LiteralExpression_04ql34v">        <text><![CDATA["20%"]]></text>
+</outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>
