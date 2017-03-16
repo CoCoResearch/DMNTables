@@ -1,6 +1,7 @@
 package co.edu.uniandes.parser;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Attribute {
@@ -9,12 +10,22 @@ public class Attribute {
 	private String type;
 	private int lb;
 	private int ub;
-	private List<String> values;
+	private HashMap<String, Integer> values;
+	private int valuesNum;
 	
 	public Attribute(String name, String type){
 		this.name = name;
 		this.type = type;
-		this.values = new ArrayList<String>();
+		this.values = new HashMap<String, Integer>();
+		this.valuesNum = 1;
+		this.lb = 0;
+		
+		if(this.type.equals("string")){
+			this.ub = 0;
+		}
+		else{
+			this.ub = 100;
+		}
 	}
 	
 	public String getName() {
@@ -49,15 +60,28 @@ public class Attribute {
 		this.ub = ub;
 	}
 	
-	public List<String> getValues(){
+	public HashMap<String, Integer> getValues(){
 		return this.values;
 	}
 	
-	public String getValue(int index){
-		return this.values.get(index);
+	public int getValue(String value){
+		int answer;
+		
+		if(values.get(value) == null){
+			answer = -1; 
+		}
+		else{
+			answer = values.get(value);
+		}
+		return answer;
 	}
 	
 	public void addValue(String value){
-		this.values.add(value);
+		boolean exists = values.containsKey(value);
+		if(!exists){
+			values.put(value, valuesNum);
+			ub = valuesNum;
+			valuesNum++;
+		}
 	}
 }

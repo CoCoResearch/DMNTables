@@ -1,14 +1,18 @@
 package co.edu.uniandes.parser;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 public class RuleExpression {
 	private Attribute attribute;
-	public String operator;
-	public String value;
+	private String operator;
+	private String value;
 	
 	public RuleExpression(Attribute attribute, String operator, String value){
 		this.attribute = attribute;
 		this.operator = operator;
-		this.value = value;
+		setValue(value);
 	}
 	
 	public Attribute getAttribute() {
@@ -28,10 +32,29 @@ public class RuleExpression {
 	}
 
 	public String getValue() {
+	
 		return value;
 	}
 
 	public void setValue(String value) {
-		this.value = value;
+		if(this.attribute.getType().equals("string")){
+			this.value = value;
+		}
+		else{
+			String shortValue = value.substring(0, 2);
+			this.value = shortValue;
+		}
+	}
+	
+	public int getIntValue(){
+		int intValue;
+		if(this.attribute.getType().equals("string")){
+			intValue = attribute.getValue(value);
+		}
+		else{
+			intValue = Integer.parseInt(value);
+		}
+		
+		return intValue;
 	}
 }
