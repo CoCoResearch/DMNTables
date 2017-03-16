@@ -1,4 +1,4 @@
-package co.edu.uniandes.experiments;
+package co.edu.uniandes.analysis;
 
 import java.io.FileInputStream;
 import java.io.IOException;
