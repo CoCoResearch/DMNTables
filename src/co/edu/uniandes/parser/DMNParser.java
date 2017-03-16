@@ -97,7 +97,7 @@ public class DMNParser {
 						Element childE = (Element) child;
 						String expression = childE.getTextContent();
 
-						if(attributes[index].getType().equals("integer")){
+						if(attributes[index].getType().equals("integer") || attributes[index].getType().equals("double")){
 							createIntegerRuleExpressions(rule, attributes[index], expression);
 						}
 						else {
@@ -117,35 +117,42 @@ public class DMNParser {
 
 		//Caso 1: <, >, <=, >=, -, (, [, ), ]
 		for(int i = 0; i < expressions.length; i++){
-			String operator;
-			String value;
-			Pattern valuePattern = Pattern.compile("(\\d+)");
-			Pattern operatorPattern = Pattern.compile("<=|>=|>|<|=|-|\\(|\\[|\\]|\\)");
-			Matcher valueMatcher = valuePattern.matcher(expressions[i].trim());
-			Matcher operatorMatcher = operatorPattern.matcher(expressions[i].trim());
+			
+			if(expressions[i].isEmpty()){
+				RuleExpression ruleExpression = new RuleExpression(attribute, ">=", "0");
+				rule.addExpression(ruleExpression);
+			}
+			else{
+				String operator;
+				String value;
+				Pattern valuePattern = Pattern.compile("(\\d+)");
+				Pattern operatorPattern = Pattern.compile("<=|>=|>|<|=|-|\\(|\\[|\\]|\\)");
+				Matcher valueMatcher = valuePattern.matcher(expressions[i].trim());
+				Matcher operatorMatcher = operatorPattern.matcher(expressions[i].trim());
 
-			if(operatorMatcher.find()){
-				operator = operatorMatcher.group(0);
+				if(operatorMatcher.find()){
+					operator = operatorMatcher.group(0);
 
-				if(!operator.equals("-") && valueMatcher.find()){
-					value = valueMatcher.group(0);
+					if(!operator.equals("-") && valueMatcher.find()){
+						value = valueMatcher.group(0);
 
-					switch(operator){
-					case "(":
-						operator = ">";
-						break;
-					case "[":
-						operator = ">=";
-						break;
-					case ")":
-						operator = "<";
-						break;
-					case "]":
-						operator = "<=";
-						break;
+						switch(operator){
+						case "(":
+							operator = ">";
+							break;
+						case "[":
+							operator = ">=";
+							break;
+						case ")":
+							operator = "<";
+							break;
+						case "]":
+							operator = "<=";
+							break;
+						}
+						RuleExpression ruleExpression = new RuleExpression(attribute, operator, value);
+						rule.addExpression(ruleExpression);
 					}
-					RuleExpression ruleExpression = new RuleExpression(attribute, operator, value);
-					rule.addExpression(ruleExpression);
 				}
 			}
 		}
@@ -188,8 +195,15 @@ public class DMNParser {
 
 	private void parseAttributes(){
 		for(int i = 0; i < attributes.length; i++){
-			addTextToProperties("attr[" + (2*i) + "] = " + attributes[i].getLb());
-			addTextToProperties("attr[" + (2*i + 1) + "] = " + attributes[i].getUb());
+			if(attributes[i].getType().equals("string")){
+				addTextToProperties("attr[" + (2*i) + "] = " + attributes[i].getLb());
+				addTextToProperties("attr[" + (2*i + 1) + "] = " + (attributes[i].getUb() - 1));
+			}
+			else{
+				addTextToProperties("attr[" + (2*i) + "] = " + attributes[i].getLb());
+				addTextToProperties("attr[" + (2*i + 1) + "] = " + attributes[i].getUb());
+			}
+			
 		}
 	}
 
@@ -210,8 +224,8 @@ public class DMNParser {
 				}
 				
 				else{
-					expression = pair;
-					operator1 = pair.getOperator();
+					expression = null;
+					operator1 = null;
 				}
 			
 				if(pair != null){
@@ -231,7 +245,7 @@ public class DMNParser {
 					else{
 						String operator2 = pair.getOperator();
 
-						if(pair.getAttribute().getName().equals(expression.getAttribute().getName())){
+						if(expression != null && pair.getAttribute().getName().equals(expression.getAttribute().getName())){
 							switch (operator1){
 							case "<=":
 								addTextToProperties("rules[" + i + "][" + (2*attrIndex) + "] = " + pairValue);
@@ -271,7 +285,7 @@ public class DMNParser {
 					}
 				}
 				
-				if(!discardPair){
+				if(operator1 != null && !discardPair){
 					if(operator1.equals("=") || operator1.equals("<=") || operator1.equals(">=")){
 						pairValue = expression.getIntValue();
 					}

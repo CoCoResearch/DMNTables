@@ -10,7 +10,7 @@ public class Main {
 		//CPDetectMissingRulesGeneric generic = new CPDetectMissingRulesGeneric(path, 2, 4, -1);
 		//CPPropagateDecisionsGeneric generic = new CPPropagateDecisionsGeneric(path, configPath);
 		
-		DMNParser parser = new DMNParser("models/decision-tables/3D_500_M.dmn");
+		DMNParser parser = new DMNParser("models/decision-tables/7D_O_1500.dmn");
 		parser.parseToProperties();
 	}
 }
