@@ -37,8 +37,8 @@ public class RuleExpression {
 	}
 
 	public void setValue(String value) {
-		if(!this.attribute.getType().equals("string") && value.length() > 2){
-			String shortValue = value.substring(0, 2);
+		if(!this.attribute.getType().equals("string") && value.length() > 3){
+			String shortValue = value.substring(0, 3);
 			this.value = shortValue;
 		}
 		
