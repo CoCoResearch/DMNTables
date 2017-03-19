@@ -9,6 +9,7 @@ import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
 import org.chocosolver.solver.search.loop.monitors.SMF;
+import org.chocosolver.solver.search.loop.monitors.SearchMonitorFactory;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
@@ -82,7 +83,7 @@ public class CPDetectOverlappingRulesGeneric {
 		setDiagonalToZero();
 		
 		//Solve problem
-		SMF.limitSolution(solver, 1);
+		SearchMonitorFactory.limitSolution(solver, 1);
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
@@ -168,8 +169,8 @@ public class CPDetectOverlappingRulesGeneric {
 	 * hyper-rectangle (i.e. decision rule)
 	 */
 	private void detectOverlappingPairRules(int i, int j){
-		BoolVar[] overlappingVars = new BoolVar[attrsNumber];
-		Constraint[] constraints = new Constraint[attrsNumber];
+		int binomial = getBinomialCoefficient();
+		BoolVar[] overlappingVars = new BoolVar[binomial];
 		int index = 0;
 		
 		for(int p = 0; p < attrsNumber - 1; p++){	
@@ -182,7 +183,6 @@ public class CPDetectOverlappingRulesGeneric {
 				innerConstraints[3] = IntConstraintFactory.arithm(rules[i][2*q + 1], ">", rules[j][2*q]);
 				
 				overlappingVars[index] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
-				constraints[index] = IntConstraintFactory.arithm(overlappingVars[index], "=", 1);
 				
 				LogicalConstraintFactory.ifThenElse(
 						LogicalConstraintFactory.and(innerConstraints),
@@ -195,7 +195,7 @@ public class CPDetectOverlappingRulesGeneric {
 		}
 		
 		LogicalConstraintFactory.ifThenElse(
-				LogicalConstraintFactory.and(constraints),
+				LogicalConstraintFactory.and(overlappingVars),
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 1), IntConstraintFactory.arithm(overlaps[j][i], "=", 1)),
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0))
 		);
@@ -209,5 +209,23 @@ public class CPDetectOverlappingRulesGeneric {
 		for(int i = 0; i < overlaps.length; i++) {
 			solver.post(IntConstraintFactory.arithm(overlaps[i][i], "=", 0));
 		}
+	}
+	
+	//https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	private int getBinomialCoefficient(){
+		int n = attrsNumber;
+		int k = 2;
+		int binomial = 1;
+
+		if(k > n - k){
+			k =  n - k;
+		}
+
+		for(int i = 1, j = n; i <= k; i++, j--){
+			binomial = (binomial * j) / i;
+		}
+
+		System.out.println("Binomial " + binomial);
+		return binomial;
 	}
 }

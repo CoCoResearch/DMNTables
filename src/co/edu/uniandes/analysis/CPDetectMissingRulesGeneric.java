@@ -10,9 +10,11 @@ import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
 import org.chocosolver.solver.search.loop.monitors.SMF;
+import org.chocosolver.solver.search.loop.monitors.SearchMonitorFactory;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.solver.variables.VariableFactory;
 
 public class CPDetectMissingRulesGeneric {
@@ -109,16 +111,22 @@ public class CPDetectMissingRulesGeneric {
 		
 		//Set solutions limit
 		if(maxSolutions != -1){
-			SMF.limitSolution(solver, maxSolutions);
+			SearchMonitorFactory.limitSolution(solver, maxSolutions);
 		}
 		else{
-			SMF.limitSolution(solver, 20);
+			SearchMonitorFactory.limitSolution(solver, 20);
 		}
 		
 		//Solve problem
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
+		
+		Variable[] vars = solver.getVars();
+		
+		for(int i = 0; i < vars.length; i++) {
+			System.out.println(vars[i]);
+		}
 	}
 	
 	/**
@@ -189,8 +197,8 @@ public class CPDetectMissingRulesGeneric {
 			}
 			else{
 				for(int p = 0; p < attrsNumber; p++){
-					missingRules[i][2*p] = VariableFactory.enumerated("Rule_" + i + "_LB", bounds[2*p], bounds[2*p + 1], solver);
-					missingRules[i][2*p + 1] = VariableFactory.enumerated("Rule_" + i + "_UB", bounds[2*p], bounds[2*p + 1], solver);
+					missingRules[i][2*p] = VariableFactory.enumerated("Rule_" + i + "_LB" + p, bounds[2*p], bounds[2*p + 1], solver);
+					missingRules[i][2*p + 1] = VariableFactory.enumerated("Rule_" + i + "_UB" + p, bounds[2*p], bounds[2*p + 1], solver);
 					solver.post(IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[i][2*p + 1]));
 				}
 			}
@@ -235,22 +243,31 @@ public class CPDetectMissingRulesGeneric {
 	 * hyper-rectangle (i.e. decision rule)
 	 */
 	private void detectOverlappingPairRules(int i, int j){
-		BoolVar[] overlappingVars = new BoolVar[attrsNumber - 1];
+		int binomial = getBinomialCoefficient();
+		BoolVar[] overlappingVars = new BoolVar[binomial];
+		Constraint[] constraints = new Constraint[binomial];
+		int index = 0;
 		
-		for(int p = 0; p < attrsNumber; p++){	
+		for(int p = 0; p < attrsNumber - 1; p++){	
+			Constraint[] innerConstraints = new Constraint[4];
+			
 			for(int q = p + 1; q < attrsNumber; q++){
-				Constraint[] innerConstraints = new Constraint[2];
-				innerConstraints[0] = IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[j][2*q + 1]);
-				innerConstraints[1] = IntConstraintFactory.arithm(missingRules[i][2*p + 1], ">", missingRules[j][2*q]);
-				overlappingVars[q - p + 1] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
+				innerConstraints[0] = IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[j][2*p + 1]);
+				innerConstraints[1] = IntConstraintFactory.arithm(missingRules[i][2*p + 1], ">", missingRules[j][2*p]);
+				innerConstraints[2] = IntConstraintFactory.arithm(missingRules[i][2*q], "<", missingRules[j][2*q + 1]);
+				innerConstraints[3] = IntConstraintFactory.arithm(missingRules[i][2*q + 1], ">", missingRules[j][2*q]);
+				
+				overlappingVars[index] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
+				constraints[index] = IntConstraintFactory.arithm(overlappingVars[index], "=", 1);
 				
 				LogicalConstraintFactory.ifThenElse(
 						LogicalConstraintFactory.and(innerConstraints),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[q - p + 1] , "=", 1)),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[q - p + 1] , "=", 0))
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 1)),
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 0))
 				); 	
+				
+				index++;
 			}
-			
 		}
 		
 		LogicalConstraintFactory.ifThenElse(
@@ -327,5 +344,22 @@ public class CPDetectMissingRulesGeneric {
 		}
 		
 		return totalArea;
+	}
+	
+	//https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	private int getBinomialCoefficient(){
+		int n = attrsNumber;
+		int k = 2;
+		int binomial = 1;
+		
+		if(k > n - k){
+			k =  n - k;
+		}
+		
+		for(int i = 1, j = n; i <= k; i++, j--){
+			binomial = (binomial * j) / i;
+		}
+		
+		return binomial;
 	}
 }
