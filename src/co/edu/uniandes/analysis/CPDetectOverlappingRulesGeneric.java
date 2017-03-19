@@ -8,7 +8,6 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
-import org.chocosolver.solver.search.loop.monitors.SMF;
 import org.chocosolver.solver.search.loop.monitors.SearchMonitorFactory;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.BoolVar;
@@ -211,7 +210,12 @@ public class CPDetectOverlappingRulesGeneric {
 		}
 	}
 	
-	//https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	/**
+	 * Calculate binomial coefficient considering n = attrsNumber,
+	 * and k = 2. Algorithm taken from: 
+	 * https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	 * @return binomial - int with the binomial coefficient
+	 */
 	private int getBinomialCoefficient(){
 		int n = attrsNumber;
 		int k = 2;
@@ -225,7 +229,6 @@ public class CPDetectOverlappingRulesGeneric {
 			binomial = (binomial * j) / i;
 		}
 
-		System.out.println("Binomial " + binomial);
 		return binomial;
 	}
 }

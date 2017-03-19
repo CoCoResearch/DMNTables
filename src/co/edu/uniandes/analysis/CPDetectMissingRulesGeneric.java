@@ -9,7 +9,6 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
-import org.chocosolver.solver.search.loop.monitors.SMF;
 import org.chocosolver.solver.search.loop.monitors.SearchMonitorFactory;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.BoolVar;
@@ -37,12 +36,7 @@ public class CPDetectMissingRulesGeneric {
 	 * Missing rules matrix
 	 */
 	private IntVar[][] missingRules;
-	
-	/**
-	 * Overlaps matrix
-	 */
-	private IntVar [][] overlaps;
-	
+		
 	/**
 	 * Array of the N-dimensional space and identified
 	 * hyper-rectangles bounds
@@ -97,14 +91,8 @@ public class CPDetectMissingRulesGeneric {
 		//Initialize missingRules matrix with K hyper-rectangles
 		initializeMissingRules();
 		
-		//Initialize overlaps matrix to identify conflicts among rules
-		initializeOverlapsMatrix();
-		
 		//Detect overlapping rules and fill the overlaps matrix
 		detectOverlappingRules();
-		
-		//Diagonal has no overlaps
-		setDiagonalToZero();
 		
 		//Ensure the complete decision space area is filled with hyper-rectangles
 		ensureArea();
@@ -207,20 +195,6 @@ public class CPDetectMissingRulesGeneric {
 	}
 	
 	/**
-	 * Initialize overlaps matrix. All cells are instantiated
-	 * as boolean variables.
-	 */
-	private void initializeOverlapsMatrix(){
-		overlaps = new IntVar[missingRules.length][missingRules.length];
-		
-		for(int i = 0; i < overlaps.length; i++) {
-			for(int j = 0; j < overlaps.length; j++) {
-				overlaps[i][j] = VariableFactory.bool("Overlaps_" + i + "_" + j, solver);
-			}
-		}
-	}
-	
-	/**
 	 * Detect all overlapping rules in the given decision space.
 	 */
 	private void detectOverlappingRules(){
@@ -259,33 +233,9 @@ public class CPDetectMissingRulesGeneric {
 				
 				overlappingVars[index] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
 				constraints[index] = IntConstraintFactory.arithm(overlappingVars[index], "=", 1);
-				
-				LogicalConstraintFactory.ifThenElse(
-						LogicalConstraintFactory.and(innerConstraints),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 1)),
-						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 0))
-				); 	
-				
+				LogicalConstraintFactory.not(LogicalConstraintFactory.and(innerConstraints));
 				index++;
 			}
-		}
-		
-		LogicalConstraintFactory.ifThenElse(
-				LogicalConstraintFactory.and(overlappingVars),
-				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 1), IntConstraintFactory.arithm(overlaps[j][i], "=", 1)),
-				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0))
-		);
-		
-		solver.post(LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0)));
-	}
-	
-	/**
-	 * Set diagonal free of overlapping errors. An hyper-rectangle
-	 * cannot overlap itself.
-	 */
-	private void setDiagonalToZero(){
-		for(int i = 0; i < overlaps.length; i++) {
-			solver.post(IntConstraintFactory.arithm(overlaps[i][i], "=", 0));
 		}
 	}
 	
@@ -346,7 +296,12 @@ public class CPDetectMissingRulesGeneric {
 		return totalArea;
 	}
 	
-	//https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	/**
+	 * Calculate binomial coefficient considering n = attrsNumber,
+	 * and k = 2. Algorithm taken from: 
+	 * https://rosettacode.org/wiki/Evaluate_binomial_coefficients#Java
+	 * @return binomial - int with the binomial coefficient
+	 */
 	private int getBinomialCoefficient(){
 		int n = attrsNumber;
 		int k = 2;
