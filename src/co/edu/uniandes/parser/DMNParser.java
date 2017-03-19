@@ -115,7 +115,7 @@ public class DMNParser {
 	private void createIntegerRuleExpressions(Rule rule, Attribute attribute, String expression){
 		String[] expressions = expression.split(",");
 
-		//Caso 1: <, >, <=, >=, -, (, [, ), ]
+		//Caso 1: <, >, <=, >=, -, (, [, ), ], empty
 		for(int i = 0; i < expressions.length; i++){
 			
 			if(expressions[i].isEmpty()){
@@ -153,6 +153,16 @@ public class DMNParser {
 						RuleExpression ruleExpression = new RuleExpression(attribute, operator, value);
 						rule.addExpression(ruleExpression);
 					}
+				}
+				
+				else {
+					if(valueMatcher.find()){
+						value = valueMatcher.group(0);
+						operator = "=";
+						RuleExpression ruleExpression = new RuleExpression(attribute, operator, value);
+						rule.addExpression(ruleExpression);
+					}
+					
 				}
 			}
 		}
