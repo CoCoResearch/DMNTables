@@ -8,7 +8,9 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
+import org.chocosolver.solver.search.loop.monitors.SMF;
 import org.chocosolver.solver.trace.Chatterbox;
+import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.VariableFactory;
 
@@ -80,6 +82,7 @@ public class CPDetectOverlappingRulesGeneric {
 		setDiagonalToZero();
 		
 		//Solve problem
+		SMF.limitSolution(solver, 1);
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
@@ -147,10 +150,10 @@ public class CPDetectOverlappingRulesGeneric {
 	 */
 	private void detectOverlappingRules(){
 		for(int i = 0; i < rules.length; i++){
-			for(int j = i + 1; j < rules.length; j++){
-				
-				//Cases A-B, B-A)
-				detectOverlappingPairRules(i,j);
+			for(int j = 0; j < rules.length; j++){
+				if(i != j){
+					detectOverlappingPairRules(i,j);
+				}
 			}
 		}
 	}
@@ -165,11 +168,30 @@ public class CPDetectOverlappingRulesGeneric {
 	 * hyper-rectangle (i.e. decision rule)
 	 */
 	private void detectOverlappingPairRules(int i, int j){
-		Constraint[] constraints = new Constraint[2*attrsNumber];
+		BoolVar[] overlappingVars = new BoolVar[attrsNumber];
+		Constraint[] constraints = new Constraint[attrsNumber];
+		int index = 0;
 		
-		for(int p = 0; p < attrsNumber; p++){			
-			constraints[2*p] = IntConstraintFactory.arithm(rules[i][2*p], "<", rules[j][2*p + 1]);
-			constraints[2*p + 1] = IntConstraintFactory.arithm(rules[i][2*p + 1], ">", rules[j][2*p]);
+		for(int p = 0; p < attrsNumber - 1; p++){	
+			Constraint[] innerConstraints = new Constraint[4];
+			
+			for(int q = p + 1; q < attrsNumber; q++){
+				innerConstraints[0] = IntConstraintFactory.arithm(rules[i][2*p], "<", rules[j][2*p + 1]);
+				innerConstraints[1] = IntConstraintFactory.arithm(rules[i][2*p + 1], ">", rules[j][2*p]);
+				innerConstraints[2] = IntConstraintFactory.arithm(rules[i][2*q], "<", rules[j][2*q + 1]);
+				innerConstraints[3] = IntConstraintFactory.arithm(rules[i][2*q + 1], ">", rules[j][2*q]);
+				
+				overlappingVars[index] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
+				constraints[index] = IntConstraintFactory.arithm(overlappingVars[index], "=", 1);
+				
+				LogicalConstraintFactory.ifThenElse(
+						LogicalConstraintFactory.and(innerConstraints),
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 1)),
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[index] , "=", 0))
+				); 	
+				
+				index++;
+			}
 		}
 		
 		LogicalConstraintFactory.ifThenElse(

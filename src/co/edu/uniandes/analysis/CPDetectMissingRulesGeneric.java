@@ -11,6 +11,7 @@ import org.chocosolver.solver.constraints.IntConstraintFactory;
 import org.chocosolver.solver.constraints.LogicalConstraintFactory;
 import org.chocosolver.solver.search.loop.monitors.SMF;
 import org.chocosolver.solver.trace.Chatterbox;
+import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.VariableFactory;
 
@@ -183,8 +184,6 @@ public class CPDetectMissingRulesGeneric {
 				for(int p = 0; p < attrsNumber; p++){
 					missingRules[i][2*p] = rules[i][2*p];
 					missingRules[i][2*p + 1] = rules[i][2*p + 1];
-					System.out.println(missingRules[i][2*p]);
-					System.out.println(missingRules[i][2*p + 1]);
 					solver.post(IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[i][2*p + 1]));
 				}
 			}
@@ -192,8 +191,6 @@ public class CPDetectMissingRulesGeneric {
 				for(int p = 0; p < attrsNumber; p++){
 					missingRules[i][2*p] = VariableFactory.enumerated("Rule_" + i + "_LB", bounds[2*p], bounds[2*p + 1], solver);
 					missingRules[i][2*p + 1] = VariableFactory.enumerated("Rule_" + i + "_UB", bounds[2*p], bounds[2*p + 1], solver);
-					System.out.println(missingRules[i][2*p]);
-					System.out.println(missingRules[i][2*p + 1]);
 					solver.post(IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[i][2*p + 1]));
 				}
 			}
@@ -223,7 +220,6 @@ public class CPDetectMissingRulesGeneric {
 			for(int j = 0; j < missingRules.length; j++){
 				if(i != j){
 					detectOverlappingPairRules(i,j);
-					System.out.println(i + "_" +j);
 				}
 			}
 		}
@@ -239,15 +235,26 @@ public class CPDetectMissingRulesGeneric {
 	 * hyper-rectangle (i.e. decision rule)
 	 */
 	private void detectOverlappingPairRules(int i, int j){
-		Constraint[] constraints = new Constraint[2*attrsNumber];
+		BoolVar[] overlappingVars = new BoolVar[attrsNumber - 1];
 		
-		for(int p = 0; p < attrsNumber; p++){			
-			constraints[2*p] = IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[j][2*p + 1]);
-			constraints[2*p + 1] = IntConstraintFactory.arithm(missingRules[i][2*p + 1], ">", missingRules[j][2*p]);
+		for(int p = 0; p < attrsNumber; p++){	
+			for(int q = p + 1; q < attrsNumber; q++){
+				Constraint[] innerConstraints = new Constraint[2];
+				innerConstraints[0] = IntConstraintFactory.arithm(missingRules[i][2*p], "<", missingRules[j][2*q + 1]);
+				innerConstraints[1] = IntConstraintFactory.arithm(missingRules[i][2*p + 1], ">", missingRules[j][2*q]);
+				overlappingVars[q - p + 1] = VariableFactory.bool("InnerOverlaps_" + i + "_" + j + "_Attributes_" + p + "_" + q, solver);
+				
+				LogicalConstraintFactory.ifThenElse(
+						LogicalConstraintFactory.and(innerConstraints),
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[q - p + 1] , "=", 1)),
+						LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlappingVars[q - p + 1] , "=", 0))
+				); 	
+			}
+			
 		}
 		
 		LogicalConstraintFactory.ifThenElse(
-				LogicalConstraintFactory.and(constraints),
+				LogicalConstraintFactory.and(overlappingVars),
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 1), IntConstraintFactory.arithm(overlaps[j][i], "=", 1)),
 				LogicalConstraintFactory.and(IntConstraintFactory.arithm(overlaps[i][j], "=", 0), IntConstraintFactory.arithm(overlaps[j][i], "=", 0))
 		);
