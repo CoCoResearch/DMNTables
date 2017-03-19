@@ -13,7 +13,6 @@ import org.chocosolver.solver.search.loop.monitors.SearchMonitorFactory;
 import org.chocosolver.solver.trace.Chatterbox;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
-import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.solver.variables.VariableFactory;
 
 public class CPDetectMissingRulesGeneric {
@@ -109,12 +108,6 @@ public class CPDetectMissingRulesGeneric {
 		Chatterbox.showSolutions(solver);
 		solver.findAllSolutions();
 		Chatterbox.printStatistics(solver);
-		
-		Variable[] vars = solver.getVars();
-		
-		for(int i = 0; i < vars.length; i++) {
-			System.out.println(vars[i]);
-		}
 	}
 	
 	/**
@@ -251,6 +244,7 @@ public class CPDetectMissingRulesGeneric {
 		
 		for(int i = 0; i < missingRules.length; i++) {
 			IntVar[] distances = new IntVar[attrsNumber];
+			IntVar[] area = new IntVar[attrsNumber - 1];
 			areas[i] = VariableFactory.enumerated("Area_" + i, 0, totalArea, solver);
 			
 			for(int p = 0; p < attrsNumber; p++) {
@@ -263,12 +257,23 @@ public class CPDetectMissingRulesGeneric {
 				solver.post(IntConstraintFactory.sum(distance, distances[p]));
 			}
 			
-			for(int p = 1; p < attrsNumber; p++) {
-				if(p == 1){
-					solver.post(IntConstraintFactory.times(distances[p - 1], distances[p], areas[i]));
+			for(int p = 0; p < attrsNumber - 1; p++) {
+				area[p] = VariableFactory.enumerated("LocalArea_" + i + "_" + p, 0, totalArea, solver);
+				
+				if(attrsNumber == 1){
+					solver.post(IntConstraintFactory.arithm(distances[p], "=", area[p]));
 				}
 				else{
-					solver.post(IntConstraintFactory.times(areas[i], distances[p], areas[i]));
+					if(p == 0){
+						solver.post(IntConstraintFactory.times(distances[p], distances[p + 1], area[p]));
+					}
+					else{
+						solver.post(IntConstraintFactory.times(area[p - 1], distances[p + 1], area[p]));
+					}
+				}
+				
+				if(p == (attrsNumber - 2)){
+					solver.post(IntConstraintFactory.arithm(areas[i], "=", area[p]));
 				}
 			}	
 		}
